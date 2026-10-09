@@ -1,0 +1,13 @@
+[mediatheque]
+id = "blank"
+name = "Médiathèque Blank"
+engine = "../mediatheque"
+backend = "sqlite"
+visibility = "private"
+
+[content]
+root = "."
+database = "01_DB/koa_mediatheque.sqlite"
+storage = "02_STORAGE"
+kristal_roots = ["kristals"]
+document_roots = ["documents"]
