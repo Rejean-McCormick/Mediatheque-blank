@@ -1,0 +1,47 @@
+ZmartZnap snapshot file index
+Files included: 43
+
+.gitignore
+.smartignore
+01_DB/.gitkeep
+02_STORAGE/content_review_files/.gitkeep
+02_STORAGE/cultural_protocol_files/.gitkeep
+02_STORAGE/external_work_reference_files/.gitkeep
+02_STORAGE/kristal_source_files/.gitkeep
+02_STORAGE/media_attachment/.gitkeep
+02_STORAGE/media_caption/.gitkeep
+02_STORAGE/media_derivative/.gitkeep
+02_STORAGE/media_original/.gitkeep
+02_STORAGE/media_preview/.gitkeep
+02_STORAGE/media_thumbnail/.gitkeep
+02_STORAGE/media_transcript/.gitkeep
+02_STORAGE/source_files/.gitkeep
+03_IMPORTS/ai_generated_docs/.gitkeep
+03_IMPORTS/google_drive_raw/.gitkeep
+03_IMPORTS/google_drive_scanned/.gitkeep
+03_IMPORTS/pending_review/.gitkeep
+04_EXPORTS/kristal/.gitkeep
+04_EXPORTS/manifests/.gitkeep
+04_EXPORTS/public_review/.gitkeep
+04_EXPORTS/uckkarchive/.gitkeep
+04_EXPORTS/xlsx/.gitkeep
+07_BACKUPS/.gitkeep
+08_LOGS/.gitkeep
+GitSink.bat
+Import-EncyK.ps1
+Initialize.ps1
+Instance.Common.ps1
+README.md
+SHA256SUMS.txt
+Start.ps1
+VERSION
+ZmartZnap.pyw
+docs/VALIDATION_051.md
+documents/.gitkeep
+kristals/.gitkeep
+mediatheque.instance.toml
+tests/test_template.py
+tools/guard_git.py
+tools/instance_guard.py
+
+Index file: SNAPSHOT_INDEX.txt

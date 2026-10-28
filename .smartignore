@@ -1,0 +1,10 @@
+# ZmartZnap lit aussi .gitignore. Ce fichier renforce les exclusions typiques.
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.p12
+*.pem
+*.key
+*.secret
+*.token
