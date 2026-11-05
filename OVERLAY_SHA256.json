@@ -1,0 +1,11 @@
+{
+  "name": "WIKIPEDIA_EN_DUMP_IMPORTER_INSTANCE_V1",
+  "files": {
+    "LANCER_WIKIPEDIA_DUMPS.cmd": "aec3275edefeff28aaf591b3547d135ea6ba2d5235edc2efbc1c481dddc7b50f",
+    "README_IMPORT_MASSIF_WIKIPEDIA_EN.md": "6967fa331ceb5da239f99c743d258e24113331473718031270ae534071cdb2d3",
+    "TESTS_VALIDATION.md": "dfdb69f6db0ea2a72b907283d0b08eabf3620c4ef1e6b414199360e82fa47698",
+    "tests/test_dump_import.py": "9dfaa0faf74e71ddc54fc1b2b0a815694274dc6d1eb8f7bca768cdec68087958",
+    "tools/wiki/dump_import/Wikipedia_Dumps_UI.pyw": "15fb493acb9e9c863ff1c73a140f9bc3269289caaee0553b0232b81e14901754",
+    "tools/wiki/dump_import/import_dumps.py": "2fc843a0f9d5b8725cf049dce07398da07db610f99c89ee49901a287a6a4a2d5"
+  }
+}

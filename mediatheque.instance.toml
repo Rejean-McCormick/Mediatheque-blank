@@ -1,6 +1,6 @@
 [mediatheque]
-id = "blank"
-name = "Médiathèque Blank"
+id = "encyklopedia-references"
+name = "Médiathèque Références — UNESCO / Wikipédia EN"
 engine = "../mediatheque"
 backend = "sqlite"
 visibility = "private"

@@ -1,0 +1,10 @@
+{
+  "package": "wikimedia-en-dump-import-fix",
+  "version": "1.0.1",
+  "target_root": "C:\\mycode\\EncyKlopedia\\mediatheque-references",
+  "files": {
+    "tools/wiki/dump_import/import_dumps.py": "b80abf36d9a35d9081565adc035258fc5bca4d32d8699af6859ec58282d81dd2",
+    "tests/test_multiline_fix.py": "4a39b18668d0ead030fc132e63267854752b6598ef2b7bc1abb7e316753c4d55",
+    "README_CORRECTIF_WIKIPEDIA_DUMPS_1_0_1.md": "e6521da4ef3b48292a3ef3379d267590f1322bd9f06ffb2b449e6e2fb062600f"
+  }
+}
