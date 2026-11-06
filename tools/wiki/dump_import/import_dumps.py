@@ -27,7 +27,7 @@ DEFAULT_INDEX = Path(r'D:\EncyKlopedia\80_search_indexes\mediatheque-references\
 ORDER = ('page', 'page_props', 'linktarget', 'externallinks', 'pagelinks', 'categorylinks')
 FILE_NAMES = {name: f'enwiki-latest-{name}.sql.gz' for name in ORDER}
 XML_NAME = 'enwiki-latest-pages-articles-multistream.xml.bz2'
-TOOL_VERSION = '1.0.1'
+TOOL_VERSION = '1.0.2'
 
 
 def stamp() -> str:
@@ -104,6 +104,22 @@ def connect(path: Path) -> sqlite3.Connection:
           source_page_id INTEGER NOT NULL, target_id INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS wiki_categorylinks (
           source_page_id INTEGER NOT NULL, category TEXT NOT NULL, type TEXT);
+        -- MediaWiki >= 1.45: cl_to removed, replaced by cl_target_id.
+        -- Preserve legacy categorylinks and all other already-imported tables.
+        -- This table stores IDs directly, without billions of per-row lookups.
+        CREATE TABLE IF NOT EXISTS wiki_categorylink_ids (
+          source_page_id INTEGER NOT NULL, target_id INTEGER NOT NULL, type TEXT);
+        -- Resolve the category title lazily through the previously imported
+        -- linktarget table. LEFT JOIN retains any still-unmatched link IDs.
+        CREATE VIEW IF NOT EXISTS wiki_categorylinks_resolved AS
+          SELECT c.source_page_id,
+                 CASE WHEN t.ns=14 THEN t.title ELSE NULL END AS category,
+                 c.type AS type, c.target_id AS category_target_id
+            FROM wiki_categorylink_ids AS c
+            LEFT JOIN wiki_linktargets AS t ON t.target_id=c.target_id
+          UNION ALL
+          SELECT c.source_page_id, c.category, c.type, NULL AS category_target_id
+            FROM wiki_categorylinks AS c;
     ''')
     # The first v1 importer saved zero-row checkpoints even though it ignored
     # continuation lines. Store statement state for safe checkpoints mid-INSERT.
@@ -236,7 +252,17 @@ def convert(stage: str, cols: list[str], row: list):
             raise ValueError('This pagelinks dump lacks pl_target_id; cannot safely reconstruct with provided linktarget schema')
         return (_int(d['pl_from']), _int(d['pl_target_id']))
     if stage == 'categorylinks':
-        return (_int(d['cl_from']), str(d['cl_to']), str(d.get('cl_type') or ''))
+        # Legacy MediaWiki uses a category title in cl_to. MediaWiki 1.45+
+        # removed cl_to; cl_target_id references linktarget.lt_id.
+        # Do not misinterpret a numeric target ID as a category title.
+        if 'cl_to' in d:
+            return (_int(d['cl_from']), str(d['cl_to']), str(d.get('cl_type') or ''))
+        if 'cl_target_id' in d:
+            target_id = _int(d['cl_target_id'])
+            if target_id is None or target_id < 1:
+                raise ValueError('categorylinks cl_target_id must be positive and non-NULL')
+            return (_int(d['cl_from']), target_id, str(d.get('cl_type') or ''))
+        raise ValueError('categorylinks unsupported schema: expected cl_target_id or cl_to; columns: '+str(cols))
     raise ValueError('Unknown stage')
 
 
@@ -248,6 +274,16 @@ INSERT_SQL = {
     'pagelinks': 'INSERT INTO wiki_pagelinks VALUES(?,?)',
     'categorylinks': 'INSERT INTO wiki_categorylinks VALUES(?,?,?)',
 }
+
+
+def insert_for_stage(stage: str, cols: list[str]) -> str:
+    if stage != 'categorylinks':
+        return INSERT_SQL[stage]
+    if 'cl_to' in cols:
+        return INSERT_SQL['categorylinks']
+    if 'cl_target_id' in cols:
+        return 'INSERT INTO wiki_categorylink_ids VALUES(?,?,?)'
+    raise ValueError('categorylinks missing cl_to/cl_target_id; got '+str(cols))
 
 
 class HashingReader:
@@ -331,10 +367,12 @@ def import_stage(conn, stage: str, path: Path, *, commit_lines=25, progress_seco
         if checkpoint and imported == 0:
             # v1 bug: it committed millions of ignored lines while importing no
             # rows. Rewind safely; no actual page entries were inserted.
-            table = {'page':'wiki_pages','page_props':'wiki_qid',
-                     'linktarget':'wiki_linktargets','externallinks':'wiki_externallinks',
-                     'pagelinks':'wiki_pagelinks','categorylinks':'wiki_categorylinks'}[stage]
-            if conn.execute(f'SELECT EXISTS(SELECT 1 FROM {table})').fetchone()[0]:
+            tables = {'page':('wiki_pages',),'page_props':('wiki_qid',),
+                      'linktarget':('wiki_linktargets',),'externallinks':('wiki_externallinks',),
+                      'pagelinks':('wiki_pagelinks',),
+                      'categorylinks':('wiki_categorylinks','wiki_categorylink_ids')}[stage]
+            if any(conn.execute(f'SELECT EXISTS(SELECT 1 FROM {table})').fetchone()[0]
+                   for table in tables):
                 raise ValueError('Zero-row checkpoint conflicts with existing data; manual review required')
             print_event('rewind_empty_v1_checkpoint',stage=stage,old_line=checkpoint)
             checkpoint=0; continuation=False; restored_cols=None
@@ -348,6 +386,7 @@ def import_stage(conn, stage: str, path: Path, *, commit_lines=25, progress_seco
     line_no=0; pending=0; batch=[]; stmts=0
     insert_active=False; active_cols=None; carry=b''
     missed=0; stmt_row_count=0; last_emit=time.monotonic(); last_commit_line=checkpoint
+    category_schema_logged=False
     try:
         with path.open('rb') as raw_file:
           hashing_reader=HashingReader(raw_file)
@@ -377,6 +416,12 @@ def import_stage(conn, stage: str, path: Path, *, commit_lines=25, progress_seco
                     if not active_cols:
                         raise ValueError(f'Missing column definitions in {stage} before INSERT')
                     insert_active=True; fragment=line[ins[2]:]
+                    if stage == 'categorylinks' and not category_schema_logged:
+                        category_schema_logged=True
+                        target_field=('cl_to' if 'cl_to' in active_cols else
+                                      'cl_target_id' if 'cl_target_id' in active_cols else 'UNKNOWN')
+                        print_event('categorylinks_schema_detected', target_field=target_field)
+                        insert_for_stage(stage, active_cols)  # refuse unknown schema before writing
                     missed=0
                 elif insert_active:
                     fragment=line
@@ -398,10 +443,10 @@ def import_stage(conn, stage: str, path: Path, *, commit_lines=25, progress_seco
                         item=convert(stage,active_cols,row)
                         if item is not None: batch.append(item)
                         if len(batch)>=10000:
-                            conn.executemany(INSERT_SQL[stage],batch)
+                            conn.executemany(insert_for_stage(stage, active_cols),batch)
                             pending+=len(batch);batch.clear()
                     if batch:
-                        conn.executemany(INSERT_SQL[stage],batch)
+                        conn.executemany(insert_for_stage(stage, active_cols),batch)
                         pending+=len(batch);batch.clear()
                 ended=_values_has_semicolon(fragment)
                 if ended:
@@ -452,7 +497,9 @@ def create_indexes(conn, stages=ORDER):
         'externallinks': ["CREATE INDEX IF NOT EXISTS idx_wiki_external_from ON wiki_externallinks(source_page_id)",
                           "CREATE INDEX IF NOT EXISTS idx_wiki_external_url ON wiki_externallinks(target_url)"],
         'pagelinks': ["CREATE INDEX IF NOT EXISTS idx_wiki_pagelinks_from ON wiki_pagelinks(source_page_id)"],
-        'categorylinks': ["CREATE INDEX IF NOT EXISTS idx_wiki_cat_from ON wiki_categorylinks(source_page_id)"]
+        'categorylinks': ["CREATE INDEX IF NOT EXISTS idx_wiki_cat_from ON wiki_categorylinks(source_page_id)",
+                          "CREATE INDEX IF NOT EXISTS idx_wiki_catid_from ON wiki_categorylink_ids(source_page_id)",
+                          "CREATE INDEX IF NOT EXISTS idx_wiki_catid_target ON wiki_categorylink_ids(target_id)"]
     }
     for stage in stages:
         if not conn.execute('SELECT completed FROM ingest_state WHERE stage=?',(stage,)).fetchone() == (1,):

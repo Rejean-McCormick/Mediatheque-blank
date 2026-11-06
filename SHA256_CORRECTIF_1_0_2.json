@@ -1,0 +1,9 @@
+{
+  "tool_version": "1.0.2",
+  "sha256": {
+    "tools/wiki/dump_import/import_dumps.py": "348de485f4faae1420068826a57ca5c262e582bb1e0c880ada74bf037b32d9d2",
+    "tests/test_categorylinks_145_fix.py": "e0672a23c641bc4deefc51a5bdc74c6619231a789c35e6911c22aaf36f10a7be",
+    "README_CORRECTIF_CATEGORYLINKS_1_0_2.md": "cb293a8941c83aa357597b97638596668d79b6b933fcc4c5915d3fd7bb9cc912",
+    "TESTS_CORRECTIF_CATEGORYLINKS.md": "752a78cfc3fa7f887b92860e218de22a38b351fa83b726fca604685d1fbd1324"
+  }
+}
