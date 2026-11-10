@@ -7,7 +7,7 @@ pour créer une bibliothèque SQLite locale indépendante, connectée au moteur 
 ## Organisation attendue sur Windows
 
 ```text
-C:\mycode\
+C:\mycode\kOA_Mediatheque\
   mediatheque\                ← moteur commun v0.5.1 (un seul exemplaire)
   mediatheque-blank\          ← modèle ou instance autonome (ce dossier)
     mediatheque.instance.toml
@@ -84,6 +84,10 @@ ci-dessus sont des exemples; **aucun dump D: n'est manipulé automatiquement**.
 - Le modèle n'est pas une garantie d'absence de fuite; ne jamais publier une
   instance contenant de véritables données privées sans vérification humaine.
 - Le modèle ne remplace ni C1/C2/C3 ni l'autorisation d'exposer des sources.
+
+## Final-system integration alignment
+
+[Private instance receipt and owner boundary](docs/BRANCH01_INSTANCE_HANDOFF.md) documents the safe source-custody target, explicit import, symlink/junction denial and what an unsigned receipt can and cannot prove. No live data is supplied or migrated by this code snapshot.
 
 ## Vérifications
 
